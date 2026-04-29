@@ -25,6 +25,17 @@ export default function RevenueChart() {
   const [doctorData, setDoctorData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [availableYears, setAvailableYears] = useState([]);
+
+  // Generate available years (current year and previous 3 years)
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let i = currentYear; i >= currentYear - 3; i--) {
+      years.push(i);
+    }
+    setAvailableYears(years);
+  }, []);
 
   useEffect(() => {
     loadChartData();
@@ -33,7 +44,7 @@ export default function RevenueChart() {
   const loadChartData = async () => {
     setLoading(true);
     try {
-      // Load monthly data for all months
+      // Load monthly data for all months of selected year
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const monthlyPromises = months.map((_, index) => 
         reportService.getMonthlySales(selectedYear, index + 1)
@@ -68,14 +79,14 @@ export default function RevenueChart() {
 
   return (
     <div className="space-y-6">
-      {/* Year Selector */}
+      {/* Year Selector - Dynamic */}
       <div className="flex justify-end">
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-          className="px-3 py-1.5 text-sm border border-gray-300 rounded"
+          className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-zakom-500"
         >
-          {[2023, 2024, 2025].map(year => (
+          {availableYears.map(year => (
             <option key={year} value={year}>{year}</option>
           ))}
         </select>
@@ -83,14 +94,14 @@ export default function RevenueChart() {
 
       {/* Revenue Trend Chart */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-md font-semibold text-gray-800 mb-4">Monthly Revenue Trend</h3>
+        <h3 className="text-md font-semibold text-gray-800 mb-4">Monthly Revenue Trend - {selectedYear}</h3>
         <ResponsiveContainer width="100%" height={350}>
           <LineChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
             <YAxis yAxisId="left" tickFormatter={(value) => `₦${(value / 1000).toFixed(0)}k`} />
             <YAxis yAxisId="right" orientation="right" />
-            <Tooltip formatter={(value, name) => [`₦${value.toLocaleString()}`, name === 'revenue' ? 'Revenue' : name]} />
+            <Tooltip formatter={(value, name) => [`₦${value?.toLocaleString() || 0}`, name === 'revenue' ? 'Revenue' : name]} />
             <Legend />
             <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#0d98ba" name="Revenue (₦)" strokeWidth={2} />
             <Line yAxisId="right" type="monotone" dataKey="tests" stroke="#c9a03d" name="Tests Conducted" strokeWidth={2} />
@@ -100,7 +111,7 @@ export default function RevenueChart() {
 
       {/* Monthly Tests Bar Chart */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h3 className="text-md font-semibold text-gray-800 mb-4">Monthly Test Volume</h3>
+        <h3 className="text-md font-semibold text-gray-800 mb-4">Monthly Test Volume - {selectedYear}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -138,6 +149,13 @@ export default function RevenueChart() {
               <Tooltip formatter={(value) => [`${value} referrals`, 'Count']} />
             </PieChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Show message if no data */}
+      {monthlyData.every(m => m.revenue === 0 && m.tests === 0) && (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <p className="text-gray-500">No data available for {selectedYear}</p>
         </div>
       )}
     </div>
